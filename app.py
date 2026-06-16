@@ -129,17 +129,23 @@ def youtube_download():
 
 @app.route('/m3u8-download', methods=['POST'])
 def m3u8_download():
-    data = request.json
-    url = data.get('url')
-    referer = data.get('referer', '')
-    
-    if not url:
-        return jsonify({'error': 'No M3U8 URL provided'}), 400
-    
-    filename = f"{uuid.uuid4().hex}.mp4"
-    filepath = os.path.join(DOWNLOAD_FOLDER, filename)
-    
     try:
+        data = request.json
+        url = data.get('url')
+        referer = data.get('referer', '')
+        
+        if not url:
+            return jsonify({'error': 'No M3U8 URL provided'}), 400
+        
+        # Check if ffmpeg is available
+        try:
+            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+        except:
+            return jsonify({'error': 'ffmpeg not available on server'}), 500
+        
+        filename = f"{uuid.uuid4().hex}.mp4"
+        filepath = os.path.join(DOWNLOAD_FOLDER, filename)
+        
         cmd = ['ffmpeg', '-y']
         
         if referer:
@@ -156,17 +162,21 @@ def m3u8_download():
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
         if result.returncode != 0:
-            return jsonify({'error': result.stderr[:200]}), 500
+            error_msg = result.stderr if result.stderr else "Unknown error"
+            return jsonify({'error': f'ffmpeg error: {error_msg[:200]}'}), 500
         
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             return send_file(
                 filepath,
                 as_attachment=True,
-                download_name=f"m3u8_video_{uuid.uuid4().hex[:8]}.mp4"
+                download_name=f"m3u8_video_{uuid.uuid4().hex[:8]}.mp4",
+                mimetype='video/mp4'
             )
         else:
             return jsonify({'error': 'File not created'}), 500
             
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Download timeout (5 minutes)'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:

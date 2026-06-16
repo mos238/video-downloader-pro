@@ -46,7 +46,7 @@
         }
         h1 { text-align: center; color: #333; margin-bottom: 10px; }
         .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
-        .url-input {
+        .url-input, .referer-input {
             width: 100%;
             padding: 15px;
             border: 2px solid #e0e0e0;
@@ -54,7 +54,7 @@
             font-size: 16px;
             margin-bottom: 10px;
         }
-        .url-input:focus { outline: none; border-color: #667eea; }
+        .url-input:focus, .referer-input:focus { outline: none; border-color: #667eea; }
         .btn {
             width: 100%;
             padding: 15px;
@@ -99,15 +99,6 @@
         .status.error { display: block; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .status.info { display: block; background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .quality-select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; }
-        .referer-input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        .referer-input:focus { outline: none; border-color: #667eea; }
         .info-text { font-size: 12px; color: #888; margin: 5px 0 15px 0; }
         .back-link {
             display: inline-block;
@@ -152,7 +143,7 @@
         <!-- M3U8 Tab -->
         <div id="m3u8" class="tab-content">
             <input type="text" id="m3u8Url" class="url-input" placeholder="https://example.com/stream.m3u8" />
-            <input type="text" id="refererUrl" class="referer-input" placeholder="Referer URL (optional - for protected streams)" />
+            <input type="text" id="refererUrl" class="referer-input" placeholder="Referer URL (optional)" />
             <div class="info-text">💡 Some streams need a Referer URL. Copy the webpage URL where you found the stream.</div>
             <button class="btn btn-primary" onclick="downloadM3U8()">⬇️ Download M3U8 Stream</button>
             <div class="loading" id="m3u8Loading"><div class="spinner"></div><p>Downloading stream...</p></div>
@@ -184,6 +175,12 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({url: url})
                 });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to fetch info');
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {
@@ -208,7 +205,7 @@
                     showStatus('youtubeStatus', data.error || 'Failed to fetch video info', 'error');
                 }
             } catch (error) {
-                showStatus('youtubeStatus', 'Network error: ' + error.message, 'error');
+                showStatus('youtubeStatus', 'Error: ' + error.message, 'error');
             } finally {
                 document.getElementById('youtubeLoading').style.display = 'none';
             }
@@ -241,7 +238,7 @@
                     showStatus('youtubeStatus', 'Error: ' + (data.error || 'Download failed'), 'error');
                 }
             } catch (error) {
-                showStatus('youtubeStatus', 'Network error: ' + error.message, 'error');
+                showStatus('youtubeStatus', 'Error: ' + error.message, 'error');
             }
         }
         
@@ -264,21 +261,27 @@
                     body: JSON.stringify({url: url, referer: referer})
                 });
                 
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = 'video.mp4';
-                    a.click();
-                    window.URL.revokeObjectURL(downloadUrl);
-                    showStatus('m3u8Status', '✅ Download complete!', 'success');
-                } else {
-                    const data = await response.json();
-                    showStatus('m3u8Status', 'Error: ' + (data.error || 'Download failed'), 'error');
+                if (!response.ok) {
+                    const text = await response.text();
+                    try {
+                        const error = JSON.parse(text);
+                        throw new Error(error.error || 'Download failed');
+                    } catch {
+                        throw new Error(text || 'Download failed');
+                    }
                 }
+                
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = 'video.mp4';
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                showStatus('m3u8Status', '✅ Download complete!', 'success');
+                
             } catch (error) {
-                showStatus('m3u8Status', 'Network error: ' + error.message, 'error');
+                showStatus('m3u8Status', 'Error: ' + error.message, 'error');
             } finally {
                 document.getElementById('m3u8Loading').style.display = 'none';
             }
