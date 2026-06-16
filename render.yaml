@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: video-downloader-pro
+    runtime: docker
+    repo: https://github.com/mos238/video-downloader-pro
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9

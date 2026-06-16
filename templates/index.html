@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .tab:hover { color: #667eea; }
+        .tab.active { color: #667eea; border-bottom: 3px solid #667eea; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .url-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .url-input:focus { outline: none; border-color: #667eea; }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(72,187,120,0.4); }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .video-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        .video-info img { max-width: 100%; border-radius: 10px; }
+        .status {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        .status.success { display: block; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { display: block; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { display: block; background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .quality-select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; }
+        .referer-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .referer-input:focus { outline: none; border-color: #667eea; }
+        .info-text { font-size: 12px; color: #888; margin: 5px 0 15px 0; }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 16px;
+            background: rgba(102,126,234,0.1);
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .back-link:hover { background: #667eea; color: white; transform: translateX(-5px); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="https://mos238.github.io/myWebSite/" class="back-link">← Back to Portfolio</a>
+        <h1>🎬 Video Downloader Pro</h1>
+        <p class="subtitle">Download YouTube videos and M3U8 streams</p>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('youtube')">🎥 YouTube</button>
+            <button class="tab" onclick="switchTab('m3u8')">📡 M3U8/HLS</button>
+        </div>
+        
+        <!-- YouTube Tab -->
+        <div id="youtube" class="tab-content active">
+            <input type="text" id="youtubeUrl" class="url-input" placeholder="https://www.youtube.com/watch?v=..." />
+            <button class="btn btn-primary" onclick="fetchYouTubeInfo()">Get Video Info</button>
+            <div class="loading" id="youtubeLoading"><div class="spinner"></div><p>Fetching video info...</p></div>
+            <div class="video-info" id="youtubeInfo">
+                <img id="thumbnail" alt="Thumbnail">
+                <h3 id="title"></h3>
+                <p id="uploader"></p>
+                <select id="formatSelect" class="quality-select"></select>
+                <button class="btn btn-success" onclick="downloadYouTube()">⬇️ Download Video</button>
+            </div>
+            <div class="status" id="youtubeStatus"></div>
+        </div>
+        
+        <!-- M3U8 Tab -->
+        <div id="m3u8" class="tab-content">
+            <input type="text" id="m3u8Url" class="url-input" placeholder="https://example.com/stream.m3u8" />
+            <input type="text" id="refererUrl" class="referer-input" placeholder="Referer URL (optional - for protected streams)" />
+            <div class="info-text">💡 Some streams need a Referer URL. Copy the webpage URL where you found the stream.</div>
+            <button class="btn btn-primary" onclick="downloadM3U8()">⬇️ Download M3U8 Stream</button>
+            <div class="loading" id="m3u8Loading"><div class="spinner"></div><p>Downloading stream...</p></div>
+            <div class="status" id="m3u8Status"></div>
+        </div>
+    </div>
+    
+    <script>
+        let currentYouTubeUrl = '';
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+        
+        async function fetchYouTubeInfo() {
+            const url = document.getElementById('youtubeUrl').value;
+            if (!url) { showStatus('youtubeStatus', 'Please enter a YouTube URL', 'error'); return; }
+            
+            document.getElementById('youtubeLoading').style.display = 'block';
+            document.getElementById('youtubeInfo').style.display = 'none';
+            showStatus('youtubeStatus', 'Fetching video info...', 'info');
+            
+            try {
+                const response = await fetch('/youtube-info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentYouTubeUrl = url;
+                    document.getElementById('thumbnail').src = data.thumbnail;
+                    document.getElementById('title').textContent = data.title;
+                    document.getElementById('uploader').textContent = '📺 ' + data.uploader;
+                    
+                    const formatSelect = document.getElementById('formatSelect');
+                    formatSelect.innerHTML = '';
+                    data.formats.forEach(f => {
+                        const option = document.createElement('option');
+                        option.value = f.format_id;
+                        const size = f.filesize ? ` (${(f.filesize / 1024 / 1024).toFixed(2)} MB)` : '';
+                        option.textContent = `${f.quality} - ${f.ext}${size}`;
+                        formatSelect.appendChild(option);
+                    });
+                    
+                    document.getElementById('youtubeInfo').style.display = 'block';
+                    showStatus('youtubeStatus', '✅ Video info loaded!', 'success');
+                } else {
+                    showStatus('youtubeStatus', data.error || 'Failed to fetch video info', 'error');
+                }
+            } catch (error) {
+                showStatus('youtubeStatus', 'Network error: ' + error.message, 'error');
+            } finally {
+                document.getElementById('youtubeLoading').style.display = 'none';
+            }
+        }
+        
+        async function downloadYouTube() {
+            const url = currentYouTubeUrl;
+            const formatId = document.getElementById('formatSelect').value;
+            
+            showStatus('youtubeStatus', 'Downloading...', 'info');
+            
+            try {
+                const response = await fetch('/youtube-download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url, format_id: formatId})
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'video.mp4';
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    showStatus('youtubeStatus', '✅ Download complete!', 'success');
+                } else {
+                    const data = await response.json();
+                    showStatus('youtubeStatus', 'Error: ' + (data.error || 'Download failed'), 'error');
+                }
+            } catch (error) {
+                showStatus('youtubeStatus', 'Network error: ' + error.message, 'error');
+            }
+        }
+        
+        async function downloadM3U8() {
+            const url = document.getElementById('m3u8Url').value;
+            const referer = document.getElementById('refererUrl').value;
+            
+            if (!url) {
+                showStatus('m3u8Status', 'Please enter an M3U8 URL', 'error');
+                return;
+            }
+            
+            document.getElementById('m3u8Loading').style.display = 'block';
+            showStatus('m3u8Status', 'Downloading M3U8 stream...', 'info');
+            
+            try {
+                const response = await fetch('/m3u8-download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url, referer: referer})
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'video.mp4';
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    showStatus('m3u8Status', '✅ Download complete!', 'success');
+                } else {
+                    const data = await response.json();
+                    showStatus('m3u8Status', 'Error: ' + (data.error || 'Download failed'), 'error');
+                }
+            } catch (error) {
+                showStatus('m3u8Status', 'Network error: ' + error.message, 'error');
+            } finally {
+                document.getElementById('m3u8Loading').style.display = 'none';
+            }
+        }
+        
+        function showStatus(id, message, type) {
+            const statusDiv = document.getElementById(id);
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
